@@ -372,6 +372,7 @@ Set `doc-popup-current-doc-fetch' accordingly."
   "In current buffer, display a DOC-FETCH based on STATUS with DATA."
   (let ((d doc-fetch))
     (pcase status
+      ;; TODO: other statuses
       (`finished
        d
        (funcall doc-popup-show-function data)))))
@@ -389,13 +390,28 @@ Uses `pos-tip-show' under the hood."
 (defun doc-popup-show-at-point ()
   "Show the documentation popup for the thing at point."
   (interactive)
+
   (let ((fetcher (doc-popup-get-fetcher-for-buffer)))
-    (if fetcher
-        (doc-popup-start-current-doc-fetch fetcher))))
+    (when fetcher
+      (doc-popup--remove-hooks)
+      (doc-popup-start-current-doc-fetch fetcher))))
+
+(defun doc-popup--setup-hooks ()
+  "Setup hooks for Doc-Popup."
+  (dolist (hook '(post-command-hook focus-out-hook))
+    (add-hook hook #'doc-popup-pos-tip-hide)))
+
+(defun doc-popup--remove-hooks ()
+  "Remove hooks for Doc-Popup."
+  (dolist (hook '(post-command-hook focus-out-hook))
+    (remove-hook hook #'doc-popup-pos-tip-hide)))
+
+(doc-popup--setup-hooks)
 
 (defun doc-popup-pos-tip-hide ()
   "Hide the `doc-popup' tooltip."
-  (pos-tip-hide))
+  (pos-tip-hide)
+  (doc-popup--remove-hooks))
 
 
 ;;; Built-in documentation fetchers
