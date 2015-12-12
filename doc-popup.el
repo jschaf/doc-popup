@@ -118,11 +118,11 @@ otherwise noted, all properties are mandatory.
      The first argument is the documentation fetcher being
      started.  The second is a callback function to report state
      changes to Doc-Popup.  The callback takes two arguments
-     STATUS DATA, where STATUS is a symbol denoting the documentation
-     fetcher status and DATA an optional argument with additional
-     data for the status report.  See
-     `doc-popup-report-buffer-fetcher-status' for more information
-     about STATUS and DATA.
+     STATUS and DATA, where STATUS is a symbol denoting the
+     documentation fetcher status and DATA an optional argument
+     with additional data for the status report.  See
+     `doc-popup-report-buffer-fetcher-status' for more
+     information about STATUS and DATA.
 
      FUNCTION may be synchronous or asynchronous, i.e. it may
      call the given callback either immediately, or at some later
@@ -311,11 +311,9 @@ fetcher."
 
 (defun doc-popup-start-elisp-fetcher (fetcher callback)
   "Start an elisp FETCHER with CALLBACK."
-  (message "ran elisp fetcher %s" fetcher)
-
-  (message "actual :elisp is %s" (doc-popup-fetcher-get fetcher 'elisp))
-  ;; (funcall doc-popup-show-function (doc-popup-get-doc-at-point))
-  (funcall callback "AAA" "BBB"))
+  (let ((elisp (doc-popup-fetcher-get fetcher 'elisp)))
+    ;; Elisp returns immediately, so we can just run the callback now.
+    (funcall callback 'finished (funcall elisp))))
 
 (defun doc-popup-interrupt-elisp-fetcher (_fetcher _process)
   "Start an elisp FETCHER with CALLBACK.")
@@ -360,11 +358,23 @@ Set `doc-popup-current-doc-fetch' accordingly."
       (let* ((fetch (doc-popup-doc-fetch-new :buffer (current-buffer)
                                              :fetcher fetcher
                                              :context nil))
-             ;; TODO: fix callback
-             (callback (lambda (a b) (message "a: %s, b: %s" a b))))
+             (callback (doc-popup-make-buffer-display-callback fetch)))
         (setq doc-popup-current-doc-fetch fetch)
         ;; report status running
         (doc-popup-doc-fetch-start fetch callback))))
+
+(defun doc-popup-make-buffer-display-callback (doc-fetch)
+  "Create a display callback for DOC-FETCH in the current buffer."
+  (lambda (&rest args)
+    (apply #'doc-popup-buffer-display-callback doc-fetch args)))
+
+(defun doc-popup-buffer-display-callback (doc-fetch status &optional data)
+  "In current buffer, display a DOC-FETCH based on STATUS with DATA."
+  (let ((d doc-fetch))
+    (pcase status
+      (`finished
+       d
+       (funcall doc-popup-show-function data)))))
 
 
 ;;; Documentation display in popups
@@ -390,10 +400,34 @@ Uses `pos-tip-show' under the hood."
 
 ;;; Built-in documentation fetchers
 
+(defun doc-popup-emacs-lisp-doc-fetcher ()
+  "Get the documentation of the function or variable at point.
+
+Adapted from `describe-function-or-variable'."
+  (let* ((v-or-f (variable-at-point))
+         (found (symbolp v-or-f))
+         (symbol (if found v-or-f (function-called-at-point))))
+    (if (not (and symbol (symbolp symbol)))
+        (message "You didn't specify a function or variable")
+      (let* ((fdoc (when (fboundp symbol)
+                     (or (documentation symbol t) "Not documented.")))
+             (vdoc (when  (boundp symbol)
+                     (or (documentation-property symbol 'variable-documentation t)
+                         "Not documented as a variable."))))
+        (or
+         (and fdoc vdoc
+              (concat fdoc "\n\n"
+                      (make-string 30 ?-) "\n" (symbol-name symbol)
+                      " is also a " "variable." "\n\n"
+                      vdoc))
+         fdoc
+         vdoc)))))
+
 (doc-popup-define-elisp-fetcher
  'emacs-lisp
  "Doc string"
- :elisp '(lambda ())
+ :modes '(emacs-lisp lisp-interaction)
+ :elisp #'doc-popup-emacs-lisp-doc-fetcher
  )
 
 (provide 'doc-popup)
