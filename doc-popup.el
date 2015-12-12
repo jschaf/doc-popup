@@ -235,7 +235,7 @@ nil otherwise."
     (or (not modes) (memq major-mode modes)
         (funcall predicate))))
 
-(defun doc-popup-get-fetcher ()
+(defun doc-popup-get-fetcher-for-buffer ()
   "Find the documentation fetcher for the current buffer.
 
 Use the fetcher in the local variable `doc-popup-fetcher' if it
@@ -251,31 +251,6 @@ is set.  Otherwise, search for the best fetcher from
 (defun doc-popup-valid-fetcher-p (fetcher)
   "Check whether a FETCHER is valid."
   (symbolp fetcher))
-
-
-;;; Documentation display in popups
-
-(defun doc-popup-pos-tip-show (str)
-  "Show a pos-tip popup with STR.
-
-Uses `pos-tip-show' under the hood."
-  (pos-tip-show str nil nil nil doc-popup-pos-tip-timeout))
-
-(defun doc-popup-get-doc-at-point ()
-  "Get the documentation string for the thing at point."
-  )
-;;;###autoload
-(defun doc-popup-show-at-point ()
-  "Show the documentation popup for the thing at point.
-
-Get a documentation fetcher for the current buffer with
-  `doc-popup-get-fetcher-for-buffer', and start it."
-  (funcall doc-popup-show-function (doc-popup-get-doc-at-point)))
-
-(defun doc-popup-pos-tip-hide ()
-  "Hide the `doc-popup' tooltip."
-  (pos-tip-hide))
-
 
 
 ;;; Documentation fetcher definition with elisp functions
@@ -336,17 +311,60 @@ fetcher."
 
 (defun doc-popup-start-elisp-fetcher (fetcher callback)
   "Start an elisp FETCHER with CALLBACK."
+  (message "ran elisp fetcher %s" fetcher)
 
-  )
+  (message "actual :elisp is %s" (doc-popup-fetcher-get fetcher 'elisp))
+  ;; (funcall doc-popup-show-function (doc-popup-get-doc-at-point))
+  (funcall callback "AAA" "BBB"))
 
-(defun doc-popup-interrupt-elisp-fetcher (_fetcher process)
-  "Start an elisp FETCHER with CALLBACK."
+(defun doc-popup-interrupt-elisp-fetcher (_fetcher _process)
+  "Start an elisp FETCHER with CALLBACK.")
 
-  )
+
+;;; Generic documentation fetches
 
+(cl-defstruct (doc-popup-doc-fetch
+               (:constructor doc-popup-doc-fetch-new))
+  "Structure for storing doc fetch state.
 
+Slots:
 
+`buffer'
+     The buffer being checked
 
+`fetcher'
+     The documentation fetcher being used
+
+`context'
+     The context object."
+  buffer fetcher context)
+
+(defun doc-popup-doc-fetch-start (doc-fetch callback)
+  "Start a DOC-FETCH with CALLBACK."
+  (let ((fetcher (doc-popup-doc-fetch-fetcher doc-fetch)))
+    (setf (doc-popup-doc-fetch-context doc-fetch)
+          (funcall (doc-popup-fetcher-get fetcher 'start) fetcher callback))))
+
+
+;;; Documentation fetches for the current buffer
+
+(defvar-local doc-popup-current-doc-fetch nil
+  "The current documentation fetch in this buffer.")
+(put 'doc-popup-current-doc-fetch 'permanent-local t)
+
+(defun doc-popup-start-current-doc-fetch (fetcher)
+  "Start a documentation fetch in the current buffer with FETCHER.
+
+Set `doc-popup-current-doc-fetch' accordingly."
+  (if fetcher
+      (let* ((fetch (doc-popup-doc-fetch-new :buffer (current-buffer)
+                                             :fetcher fetcher
+                                             :context nil))
+             ;; TODO: fix callback
+             (callback (lambda (a b) (message "a: %s, b: %s" a b))))
+        (setq doc-popup-current-doc-fetch fetch)
+        ;; report status running
+        (doc-popup-doc-fetch-start fetch callback))))
 
 
 ;;; Documentation display in popups
@@ -357,23 +375,26 @@ fetcher."
 Uses `pos-tip-show' under the hood."
   (pos-tip-show str nil nil nil doc-popup-pos-tip-timeout))
 
-(defun doc-popup-get-doc-at-point ()
-  "Get the documentation string for the thing at point."
-  )
 ;;;###autoload
 (defun doc-popup-show-at-point ()
   "Show the documentation popup for the thing at point."
-  (funcall doc-popup-show-function (doc-popup-get-doc-at-point)))
+  (interactive)
+  (let ((fetcher (doc-popup-get-fetcher-for-buffer)))
+    (if fetcher
+        (doc-popup-start-current-doc-fetch fetcher))))
 
 (defun doc-popup-pos-tip-hide ()
   "Hide the `doc-popup' tooltip."
   (pos-tip-hide))
 
+
+;;; Built-in documentation fetchers
 
-
-
-
-
+(doc-popup-define-elisp-fetcher
+ 'emacs-lisp
+ "Doc string"
+ :elisp '(lambda ())
+ )
 
 (provide 'doc-popup)
 
