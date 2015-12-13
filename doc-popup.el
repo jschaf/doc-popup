@@ -70,7 +70,7 @@ The function should be a no-op in this case."
   :type 'function
   :package-version '(doc-popup . "0.1"))
 
-(defcustom doc-popup-pos-tip-timeout -1
+(defcustom doc-popup-timeout -1
   "Time in seconds to hide the tooltip after.
 
 If time is non-positive, keep popup displayed until another
@@ -384,7 +384,7 @@ Set `doc-popup-current-doc-fetch' accordingly."
   "Show a pos-tip popup with STR.
 
 Uses `pos-tip-show' under the hood."
-  (pos-tip-show str nil nil nil doc-popup-pos-tip-timeout))
+  (pos-tip-show str nil nil nil doc-popup-timeout))
 
 ;;;###autoload
 (defun doc-popup-show-at-point ()
