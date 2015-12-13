@@ -390,23 +390,23 @@ Uses `pos-tip-show' under the hood."
 (defun doc-popup-show-at-point ()
   "Show the documentation popup for the thing at point."
   (interactive)
-
   (let ((fetcher (doc-popup-get-fetcher-for-buffer)))
     (when fetcher
-      (doc-popup--remove-hooks)
-      (doc-popup-start-current-doc-fetch fetcher))))
+      (doc-popup-start-current-doc-fetch fetcher)
+      (doc-popup--add-hooks))))
 
-(defun doc-popup--setup-hooks ()
+(defvar doc-popup--hooks-to-use '(pre-command-hook focus-out-hook)
+  "Hooks to toggle auto-hiding of Doc-Popup tooltips.")
+
+(defun doc-popup--add-hooks ()
   "Setup hooks for Doc-Popup."
-  (dolist (hook '(post-command-hook focus-out-hook))
-    (add-hook hook #'doc-popup-pos-tip-hide)))
+  (dolist (hook doc-popup--hooks-to-use)
+    (add-hook hook doc-popup-hide-function)))
 
 (defun doc-popup--remove-hooks ()
   "Remove hooks for Doc-Popup."
-  (dolist (hook '(post-command-hook focus-out-hook))
+  (dolist (hook doc-popup--hooks-to-use)
     (remove-hook hook #'doc-popup-pos-tip-hide)))
-
-(doc-popup--setup-hooks)
 
 (defun doc-popup-pos-tip-hide ()
   "Hide the `doc-popup' tooltip."
