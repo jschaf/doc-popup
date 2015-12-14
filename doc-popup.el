@@ -392,14 +392,17 @@ Uses `pos-tip-show' under the hood."
   (interactive)
   (let ((fetcher (doc-popup-get-fetcher-for-buffer)))
     (when fetcher
-      (doc-popup-start-current-doc-fetch fetcher)
-      (doc-popup--add-hooks))))
+      (doc-popup--add-hooks)
+      (doc-popup-start-current-doc-fetch fetcher))))
 
 (defvar doc-popup--hooks-to-use '(pre-command-hook focus-out-hook)
   "Hooks to toggle auto-hiding of Doc-Popup tooltips.")
 
 (defun doc-popup--add-hooks ()
   "Setup hooks for Doc-Popup."
+  ;; TODO: this is a weird bug in spacemacs, see
+  ;; https://github.com/syl20bnr/spacemacs/issues/4175
+  (setq post-command-hook (delete t post-command-hook))
   (dolist (hook doc-popup--hooks-to-use)
     (add-hook hook doc-popup-hide-function)))
 
@@ -443,8 +446,7 @@ Adapted from `describe-function-or-variable'."
  'emacs-lisp
  "Doc string"
  :modes '(emacs-lisp lisp-interaction)
- :elisp #'doc-popup-emacs-lisp-doc-fetcher
- )
+ :elisp #'doc-popup-emacs-lisp-doc-fetcher)
 
 (provide 'doc-popup)
 
