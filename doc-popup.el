@@ -44,7 +44,8 @@
   :link '(url-link :tag "Github" "https://github.com/jschaf/doc-popup"))
 
 (defcustom doc-popup-fetchers
-  '(emacs-lisp)
+  '(emacs-lisp
+    rust)
   "Documentation fetchers available for automatic selection."
   :group 'doc-popup
   :type '(repeat (symbol :tag "Fetcher"))
@@ -201,7 +202,7 @@ otherwise noted, all properties are mandatory.
         (error "Invalid :modes %s in documentation fetcher %s, %s must be a symbol"
                modes symbol mode)))
     (unless (or (null predicate) (functionp predicate))
-      (error ":predicate %S of documentation fetcher %s  is not a function"
+      (error ":predicate %S of documentation fetcher %s is not a function"
              symbol predicate))
 
     (let ((real-predicate
@@ -232,8 +233,8 @@ Return non-nil if FETCHER may be used for the current buffer, and
 nil otherwise."
   (let ((modes (doc-popup-fetcher-get fetcher 'modes))
         (predicate (doc-popup-fetcher-get fetcher 'predicate)))
-    (or (not modes) (memq major-mode modes)
-        (funcall predicate))))
+    (and (or (not modes) (memq major-mode modes))
+         (funcall predicate))))
 
 (defun doc-popup-get-fetcher-for-buffer ()
   "Find the documentation fetcher for the current buffer.
@@ -445,14 +446,13 @@ Adapted from `describe-function-or-variable'."
 (doc-popup-define-elisp-fetcher
     'emacs-lisp
   "Get docstring for the elisp thing at the point."
-  :modes '(emacs-lisp lisp-interaction)
+  :modes '(emacs-lisp-mode lisp-interaction-mode)
   :elisp #'doc-popup-emacs-lisp-doc-fetcher)
-
 
 (doc-popup-define-elisp-fetcher
     'rust
   "Get docstring for the elisp thing at the point."
-  :modes '(rust)
+  :modes '(rust-mode)
   :elisp #'racer-eldoc)
 
 (provide 'doc-popup)
