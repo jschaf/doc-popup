@@ -420,7 +420,7 @@ Uses `pos-tip-show' under the hood."
 ;;; Built-in documentation fetchers
 
 (defun doc-popup-emacs-lisp-doc-fetcher ()
-  "Get the documentation of the function or variable at point.
+  "Get the documentation of the elisp function or variable at point.
 
 Adapted from `describe-function-or-variable'."
   (let* ((v-or-f (variable-at-point))
@@ -444,7 +444,7 @@ Adapted from `describe-function-or-variable'."
 
 (doc-popup-define-elisp-fetcher
  'emacs-lisp
- "Doc string"
+ "Get docstring for the elisp thing at the point."
  :modes '(emacs-lisp lisp-interaction)
  :elisp #'doc-popup-emacs-lisp-doc-fetcher)
 
