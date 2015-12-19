@@ -448,6 +448,13 @@ Adapted from `describe-function-or-variable'."
  :modes '(emacs-lisp lisp-interaction)
  :elisp #'doc-popup-emacs-lisp-doc-fetcher)
 
+
+(doc-popup-define-elisp-fetcher
+    'rust
+  "Get docstring for the elisp thing at the point."
+  :modes '(rust)
+  :elisp #'racer-eldoc)
+
 (provide 'doc-popup)
 
 ;;; doc-popup.el ends here
