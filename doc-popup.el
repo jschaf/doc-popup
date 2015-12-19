@@ -443,10 +443,10 @@ Adapted from `describe-function-or-variable'."
          vdoc)))))
 
 (doc-popup-define-elisp-fetcher
- 'emacs-lisp
- "Get docstring for the elisp thing at the point."
- :modes '(emacs-lisp lisp-interaction)
- :elisp #'doc-popup-emacs-lisp-doc-fetcher)
+    'emacs-lisp
+  "Get docstring for the elisp thing at the point."
+  :modes '(emacs-lisp lisp-interaction)
+  :elisp #'doc-popup-emacs-lisp-doc-fetcher)
 
 
 (doc-popup-define-elisp-fetcher
