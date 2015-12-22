@@ -31,7 +31,6 @@
 ;;; Code:
 
 (require 'dash)
-(require 'seq)                          ; Sequence functions
 (require 'pos-tip)
 
 
