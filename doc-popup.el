@@ -44,6 +44,7 @@
 
 (defcustom doc-popup-fetchers
   '(emacs-lisp
+    ruby
     rust)
   "Documentation fetchers available for automatic selection."
   :group 'doc-popup
@@ -458,6 +459,34 @@ Adapted from `describe-function-or-variable'."
   "Get docstring for the elisp thing at the point."
   :modes '(rust-mode)
   :elisp #'doc-popup-rust-doc-fetcher)
+
+
+(defun doc-popup-ruby-doc-fetcher ()
+  "Get the documentation of the Ruby thing at point."
+  (require 'robe)
+  ;; robe-doc
+  ;; rob-ask-prompt robe-jump-prompt
+  ;; robe-show-doc
+  ;; spec: ("Array" t "map" nil)
+  ;; robe-doc-for spec
+
+  (let ((thing (thing-at-point 'symbol))
+        spec doc docstring)
+
+    (if (not thing)
+        "No symbol at point"
+      (setq spec (robe-jump-prompt thing))
+      (setq doc (robe-doc-for spec))
+      (setq docstring (cdr (assoc 'docstring doc)))
+      docstring
+      "YOLO"
+      )))
+
+(doc-popup-define-elisp-fetcher
+    'ruby
+  "Get docstring for the elisp thing at the point."
+  :modes '(ruby-mode enh-ruby-mode)
+  :elisp #'doc-popup-ruby-doc-fetcher)
 
 (provide 'doc-popup)
 
