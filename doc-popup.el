@@ -44,6 +44,7 @@
 
 (defcustom doc-popup-fetchers
   '(emacs-lisp
+    javascript
     ruby
     rust)
   "Documentation fetchers available for automatic selection."
@@ -487,6 +488,31 @@ Adapted from `describe-function-or-variable'."
   "Get docstring for the elisp thing at the point."
   :modes '(ruby-mode enh-ruby-mode)
   :elisp #'doc-popup-ruby-doc-fetcher)
+
+(defun doc-popup-javascript-doc-fetcher ()
+  "Get the documentation of the JavaScript thing at point."
+  ;; Simplified version of `tern-get-docs'.  Removes browse url
+  ;; after two consecutive calls and returns a string of the documentation
+  ;; instead of using `tern-message.'
+
+  ;; TODO: this is a callback
+  (tern-run-query
+   (lambda (data)
+     (let ((url (cdr (assq 'url data))) (doc (cdr (assq 'doc data))))
+       (cond (doc
+              (setf tern-last-docs-url url)
+              doc)
+             (url
+              (browse-url url))
+             (t "Not found"))))
+   "documentation"
+   (point)))
+
+(doc-popup-define-elisp-fetcher
+    'javascript
+  "Get docstring for the elisp thing at the point."
+  :modes '(javascript-mode js2-mode)
+  :elisp #'doc-popup-javascript-doc-fetcher)
 
 (provide 'doc-popup)
 
