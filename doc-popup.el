@@ -321,6 +321,82 @@ fetcher."
   "Start an elisp FETCHER with CALLBACK.")
 
 
+;;; Documentation fetcher definition for elisp with callbacks.
+
+(defun doc-popup-define-elisp-callback-fetcher (symbol docstring &rest properties)
+  "Define SYMBOL as a documentation fetcher using an elisp function.
+
+Define SYMBOL as generic documentation fetcher via
+`doc-popup-define-generic-fetcher', which uses an elisp function
+to check the buffer.  SYMBOL and DOCSTRING are the same as for
+`doc-popup-define-generic-fetcher'.
+
+In addition to the properties understood by
+`doc-popup-define-generic-fetcher', the following PROPERTIES
+constitute a elisp documentation fetcher.  Unless otherwise noted, all
+properties are mandatory.  Note that the default `:error-filter'
+of elisp fetchers is `doc-popup-sanitize-errors'.
+
+`:elisp-with-callback FUNCTION'
+     The elisp function to run for documentation checking.
+
+     FUNCTION shall take one argument, the string of the thing at
+     the point.
+
+`:callback FUNCTION'
+     The elisp function to run after `elisp-with-callback' succeeds.
+
+
+Note that you may not give `:start' or `:interrupt' for a elisp
+fetcher."
+
+  (declare (indent 1)
+           (doc-string 2))
+  (dolist (prop '(:start :interrupt))
+    (when (plist-get properties prop)
+      (error "%s not allowed in definition of elisp documentation fetcher %s"
+             prop symbol)))
+
+  (let ((elisp (plist-get properties :elisp))
+        (predicate (plist-get properties :predicate)))
+
+    (unless elisp-with-callback
+      (error "Missing :elisp-with-callback in documentation fetcher %s" symbol))
+    (unless (or (symbolp elisp-with-callback) (listp elisp-with-callback))
+      (error "elisp-with-callback for documentation fetcher %s must be a symbol: %S"
+             symbol elisp-with-callback))
+
+    (unless callback
+      (error "Missing :callback in documentation fetcher %s" symbol))
+    (unless (or (symbolp callback) (listp callback))
+      (error "callback for documentation fetcher %s must be a symbol: %S"
+             symbol callback))
+
+    (setq properties
+          (plist-put properties :predicate
+                     (lambda ()
+                       (or (not predicate) (funcall predicate)))))
+
+    (apply #'doc-popup-define-generic-fetcher symbol docstring
+           :start #'doc-popup-start-elisp-fetcher
+           :interrupt #'doc-popup-interrupt-elisp-fetcher
+           properties)
+
+    (pcase-dolist (`(,prop . ,value)
+                   `((elisp-with-callback . ,elisp-with-callback))
+                   `((callback . ,callback)))
+      (setf (doc-popup-fetcher-get symbol prop) value))))
+
+(defun doc-popup-start-elisp-with-callback-fetcher (fetcher callback)
+  "Start an elisp FETCHER with CALLBACK."
+  (let ((elisp-with-callback (doc-popup-fetcher-get fetcher 'elisp-with-callback)))
+    ;; Elisp returns immediately, so we can just run the callback now.
+    (funcall callback 'finished (funcall elisp-with-callback))))
+
+(defun doc-popup-interrupt-elisp-with-callback-fetcher (_fetcher _process)
+  "Start an elisp FETCHER with CALLBACK.")
+
+
 ;;; Generic documentation fetches
 
 (cl-defstruct (doc-popup-doc-fetch
@@ -489,7 +565,17 @@ Adapted from `describe-function-or-variable'."
   :modes '(ruby-mode enh-ruby-mode)
   :elisp #'doc-popup-ruby-doc-fetcher)
 
-(defun doc-popup-javascript-doc-fetcher ()
+
+(defun doc-popup-javascript-doc-fetcher-callback (data)
+  (let ((url (cdr (assq 'url data))) (doc (cdr (assq 'doc data))))
+    (cond (doc
+           (setf tern-last-docs-url url)
+           doc)
+          (url
+           (browse-url url))
+          (t "Not found"))))
+
+(defun doc-popup-javascript-doc-fetcher (callback)
   "Get the documentation of the JavaScript thing at point."
   ;; Simplified version of `tern-get-docs'.  Removes browse url
   ;; after two consecutive calls and returns a string of the documentation
@@ -497,22 +583,15 @@ Adapted from `describe-function-or-variable'."
 
   ;; TODO: this is a callback
   (tern-run-query
-   (lambda (data)
-     (let ((url (cdr (assq 'url data))) (doc (cdr (assq 'doc data))))
-       (cond (doc
-              (setf tern-last-docs-url url)
-              doc)
-             (url
-              (browse-url url))
-             (t "Not found"))))
+   callback
    "documentation"
    (point)))
 
-(doc-popup-define-elisp-fetcher
+(doc-popup-define-elisp-callback-fetcher
     'javascript
   "Get docstring for the elisp thing at the point."
   :modes '(javascript-mode js2-mode)
-  :elisp #'doc-popup-javascript-doc-fetcher)
+  :elisp-with-callback #'doc-popup-javascript-doc-fetcher)
 
 (provide 'doc-popup)
 
